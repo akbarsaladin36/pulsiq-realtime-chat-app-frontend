@@ -24,6 +24,8 @@ import useMessagesStore from "@/stores/message";
 import { connectSocket, getSocket } from "@/utils/socket";
 import DialogComponent from "@/components/DialogComponent";
 import useProfilesStore from "@/stores/profile";
+import useUsersStore from "@/stores/user";
+import useContactsStore from "@/stores/contact";
 
 export default function WhatsAppUI() {
   const { logout } = useAuthStore();
@@ -39,6 +41,13 @@ export default function WhatsAppUI() {
   // menu state
   const [anchorEl, setAnchorEl] = useState(null);
   const [openProfileModal, setOpenProfileModal] = useState(false);
+  const [openCreateChatModal, setOpenCreateChatModal] = useState(false);
+  const [openCreateContactModal, setOpenCreateContactModal] = useState(false);
+  const [searchUser, setSearchUser] = useState("");
+  const [searchContactUser, setSearchContactUser] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedContact, setSelectedContact] = useState(null)
+  const listRef = useRef(null);
   const open = Boolean(anchorEl);
   const {
     GetMessages,
@@ -50,11 +59,15 @@ export default function WhatsAppUI() {
   } = useMessagesStore();
   const { fetchUser, user } = useAuthStore();
   const { GetProfile, UpdateProfile } = useProfilesStore();
+  const { GetUsersPaginate, setSearch, nextPage, resetAndFetch, users, loading } = useUsersStore()
+  const { GetContacts, setSearchContact, nextPageContact, resetAndFetchContact, CreateContact, contacts } = useContactsStore()
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     GetMessages();
     fetchUser();
+    GetUsersPaginate();
+    GetContacts();
   }, []);
 
   useEffect(() => {
@@ -93,7 +106,40 @@ export default function WhatsAppUI() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messageDetails]);
 
-  // console.log(selectedChat);
+  // useEffect for contact modal
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setSearch(searchUser);
+      resetAndFetch();
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [searchUser]);
+
+  useEffect(() => {
+    if (openCreateContactModal) {
+      setSearch("");
+      resetAndFetch();
+    }
+  }, [openCreateContactModal]);
+
+
+  // useEffect for chats modal
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setSearchContact(searchContactUser);
+      resetAndFetchContact();
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [searchContactUser]);
+
+  useEffect(() => {
+    if (openCreateChatModal) {
+      setSearchContact("");
+      resetAndFetchContact();
+    }
+  }, [openCreateChatModal]);
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -103,7 +149,25 @@ export default function WhatsAppUI() {
     setAnchorEl(null);
   };
 
-  const openhandleProfile = async () => {
+  const handleScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+      nextPage();
+    }
+  };
+
+  const handleScrollContact = () => {
+    const el = listRef.current;
+    if (!el) return;
+
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+      nextPageContact();
+    }
+  };
+
+  const openHandleProfile = async () => {
     const data = await GetProfile();
     setProfileForm({
       firstName: data.first_name,
@@ -155,6 +219,51 @@ export default function WhatsAppUI() {
     setMessage("");
   };
 
+  const openHandleCreateChat = async () => {
+    setOpenCreateChatModal(true);
+    handleMenuClose();
+  };
+
+  const closeHandleCreateChat = () => {
+    setOpenCreateChatModal(false);
+  };
+
+  const openHandleCreateContact = async () => {
+    setOpenCreateContactModal(true);
+    handleMenuClose();
+  };
+
+  const closeHandleCreateContact = () => {
+    setOpenCreateContactModal(false);
+  };
+
+  const handleSearchContactChange = (e) => {
+    setSearchUser(e.target.value);
+  }
+
+  const handleCreateContact = async () => {
+    const data = {
+      contactUuid: selectedUser.uuid,
+      fullName: `${selectedUser.first_name} ${selectedUser.last_name}`
+    };
+    await CreateContact(data);
+    setOpenCreateContactModal(false);
+  }
+
+  const handleSearchChatChange = (e) => {
+    setSearchContactUser(e.target.value);
+  }
+
+  const handleCreateChat = async () => {
+    const data = {
+      receiverUuid: selectedContact.contact_uuid,
+      message: `Halo ${selectedContact.full_name} salam kenal. Namamu siapa ?` 
+    };
+    await CreateMessage(data);
+    setOpenCreateChatModal(false);
+    alert("Sukses! Chat baru telah berhasil dibuat!");
+  }
+
   const handleLogout = async () => {
     await logout();
     handleMenuClose();
@@ -201,7 +310,8 @@ export default function WhatsAppUI() {
               </Avatar>
 
               <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-                <MenuItem onClick={() => openhandleProfile()}>Profile</MenuItem>
+                <MenuItem onClick={() => openHandleProfile()}>Profile</MenuItem>
+                <MenuItem onClick={() => openHandleCreateContact()}>Contacts</MenuItem>
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
               </Menu>
             </Box>
@@ -224,11 +334,12 @@ export default function WhatsAppUI() {
                 <ListItem
                   sx={{
                     cursor: "pointer",
-                    bgcolor: "transparent",
+                    bgcolor: "lightblue",
                   }}
+                  onClick={() => openHandleCreateChat()}
                 >
-                  <Avatar sx={{ mr: 2 }}>
-                    <AddIcon />
+                  <Avatar sx={{ mr: 2, bgcolor: "lightgreen", border: "1px solid black" }}>
+                    <AddIcon sx={{ color: "black" }} />
                   </Avatar>
                   <ListItemText
                     primary="New Chat"
@@ -265,11 +376,11 @@ export default function WhatsAppUI() {
                 <ListItem
                   sx={{
                     cursor: "pointer",
-                    bgcolor: "transparent",
+                    bgcolor: "lightblue",
                   }}
                 >
-                  <Avatar sx={{ mr: 2 }}>
-                    <AddIcon />
+                  <Avatar sx={{ mr: 2, bgcolor: "lightgreen", border: "1px solid black" }}>
+                    <AddIcon sx={{ color: "black" }} />
                   </Avatar>
                   <ListItemText
                     primary="New Status"
@@ -444,6 +555,145 @@ export default function WhatsAppUI() {
           <>
             <Button onClick={() => closeHandleProfile()}>Close</Button>
             <Button onClick={() => handleUpdateProfile()}>Update</Button>
+          </>
+        }
+      />
+
+      {/* Create Chat Modal */}
+      <DialogComponent
+        open={openCreateChatModal}
+        close={closeHandleCreateChat}
+        title="Create New Chat"
+        content={
+          <>
+            <form id="form-create-chat">
+              <TextField
+                name="searchUser"
+                id="searchUser"
+                label="Search"
+                type="text"
+                fullWidth
+                variant="standard"
+                placeholder="search a user from your contact"
+                autoFocus
+                required
+                sx={{ position: "sticky" }}
+                onChange={handleSearchChatChange}
+                value={searchContactUser}
+              />
+            </form>
+            <List
+              ref={handleScrollContact}
+              onScroll={handleScroll}
+              sx={{ flex: 1, overflowY: "auto", maxHeight: 300 }}
+            >
+              {contacts.map((contact) => (
+                <ListItem
+                  key={contact.contact_uuid}
+                  onClick={() => setSelectedContact(contact)}
+                  sx={{
+                    cursor: "pointer",
+                    bgcolor:
+                      selectedContact?.contact_uuid === contact.contact_uuid ? "#e3f2fd" : "transparent",
+                  }}
+                >
+                  <Avatar sx={{ mr: 2 }}>
+                    {contact.full_name.charAt(0).toUpperCase()}
+                  </Avatar>
+                  <ListItemText
+                    primary={`${contact.full_name}`}
+                  />
+                </ListItem>
+              ))}
+
+              {/* {loading && (
+                <Typography textAlign="center" sx={{ p: 1 }}>
+                  Loading...
+                </Typography>
+              )} */}
+
+              {!loading && contacts.length === 0 && (
+                <Typography textAlign="center" sx={{ p: 2 }}>
+                  No contact found
+                </Typography>
+              )}
+            </List>
+          </>
+        }
+        actions={
+          <>
+            <Button onClick={() => closeHandleCreateChat()}>Close</Button>
+            <Button onClick={() => handleCreateChat()}>Add</Button>
+          </>
+        }
+      />
+
+      {/* Create Contact Modal */}
+      <DialogComponent
+        open={openCreateContactModal}
+        close={closeHandleCreateContact}
+        title="Create New Contact"
+        content={
+          <>
+            <form id="form-create-contact">
+              <TextField
+                name="searchUser"
+                id="searchUser"
+                label="Search"
+                type="text"
+                fullWidth
+                variant="standard"
+                placeholder="search a user"
+                autoFocus
+                required
+                sx={{ position: "sticky" }}
+                onChange={handleSearchContactChange}
+                value={searchUser}
+              />
+            </form>
+            <List
+              ref={listRef}
+              onScroll={handleScroll}
+              sx={{ flex: 1, overflowY: "auto", maxHeight: 300 }}
+            >
+              {users.map((user) => (
+                <ListItem
+                  key={user.uuid}
+                  onClick={() => setSelectedUser(user)}
+                  sx={{
+                    cursor: "pointer",
+                    bgcolor:
+                      selectedUser?.uuid === user.uuid ? "#e3f2fd" : "transparent",
+                  }}
+                >
+                  <Avatar sx={{ mr: 2 }}>
+                    {user.username.charAt(0).toUpperCase()}
+                  </Avatar>
+                  <ListItemText
+                    primary={user.username}
+                    secondary={`${user.first_name} ${user.last_name}`}
+                  />
+                </ListItem>
+              ))}
+
+              {loading && (
+                <Typography textAlign="center" sx={{ p: 1 }}>
+                  Loading...
+                </Typography>
+              )}
+
+              {!loading && users.length === 0 && (
+                <Typography textAlign="center" sx={{ p: 2 }}>
+                  No users found
+                </Typography>
+              )}
+            </List>
+          </>
+        }
+        actions={
+          <>
+            <Button onClick={() => closeHandleCreateContact()}>Close</Button>
+            <Button onClick={() => handleCreateContact()}>Add</Button>
           </>
         }
       />

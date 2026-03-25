@@ -1,43 +1,41 @@
 import useAuthStore from "@/stores/auth";
-import { connectSocket } from "@/utils/socket";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const Index = () => {
-  const [formLogin, setFormLogin] = useState({
+const Register = () => {
+  const [formRegister, setFormRegister] = useState({
     username: "",
     password: "",
   });
-  const { login } = useAuthStore();
+  const { register } = useAuthStore();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormLogin({
-      ...formLogin,
+    setFormRegister({
+      ...formRegister,
       [e.target.name]: e.target.value,
     });
   };
 
-  const handleLoginSubmit = async (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     const data = {
-      username: formLogin.username,
-      password: formLogin.password,
+      username: formRegister.username,
+      email: formRegister.email,
+      password: formRegister.password,
     };
-    const res = await login(data);
-    const socket = connectSocket();
-    socket.emit("join", res.uuid);
-    navigate("/user/home");
+    const res = await register(data);
+    navigate("/");
   };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
       <div className="bg-white p-6 rounded shadow-md w-100 text-center">
-        <p className="text-4xl font-semibold">PULSIQ</p>
+        <p className="text-4xl font-semibold">Create Account</p>
         <div className="mt-10">
-          <form onSubmit={handleLoginSubmit}>
+          <form onSubmit={handleRegisterSubmit}>
             <div className="mt-5">
               <TextField
                 required
@@ -46,6 +44,18 @@ const Index = () => {
                 name="username"
                 label="Username"
                 placeholder="username"
+                onChange={handleChange}
+                className="w-80"
+              />
+            </div>
+            <div className="mt-5">
+              <TextField
+                required
+                id="email"
+                type="email"
+                name="email"
+                label="E-mail"
+                placeholder="E-mail"
                 onChange={handleChange}
                 className="w-80"
               />
@@ -63,11 +73,11 @@ const Index = () => {
               />
             </div>
             <div className="mt-5">
-              Not registered ? Please <Link to="/register" className="text-blue-500">register</Link> now!
+              Are you registered ? Please <Link to="/" className="text-blue-500">login</Link> now!
             </div>
             <div className="mt-5">
               <Button type="submit" variant="contained" className="w-80">
-                Login
+                Register
               </Button>
             </div>
           </form>
@@ -77,4 +87,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Register;

@@ -6,7 +6,7 @@ let socket;
 export const connectSocket = () => {
   const token = getToken();
 
-  socket = io("http://localhost:3030", {
+  socket = io(import.meta.env.VITE_SOCKET_IO_URL, {
     transports: ["websocket", "polling"],
     auth: { token },
   });

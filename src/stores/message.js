@@ -1,7 +1,7 @@
 import axiosApi from "@/utils/axios";
 import { create } from "zustand";
 
-const useMessagesStore = create((set) => ({
+const useMessagesStore = create((set, get) => ({
   messages: [],
   messageDetails: [],
   error: null,
@@ -43,6 +43,7 @@ const useMessagesStore = create((set) => ({
     set({ loading: true });
     try {
       await axiosApi.post("user/messages", data);
+      get().GetMessages();
       set({ error: null, loading: false });
     } catch (error) {
       set({ error: error.response.data.message, loading: false });
