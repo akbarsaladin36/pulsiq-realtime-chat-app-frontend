@@ -27,7 +27,7 @@ import useProfilesStore from "@/stores/profile";
 import useUsersStore from "@/stores/user";
 import useContactsStore from "@/stores/contact";
 
-export default function WhatsAppUI() {
+export default function Home() {
   const { logout } = useAuthStore();
   const [tab, setTab] = useState(0);
   const [selectedChat, setSelectedChat] = useState(null);
@@ -311,7 +311,7 @@ export default function WhatsAppUI() {
 
               <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
                 <MenuItem onClick={() => openHandleProfile()}>Profile</MenuItem>
-                <MenuItem onClick={() => openHandleCreateContact()}>Contacts</MenuItem>
+                {/* <MenuItem onClick={() => openHandleCreateContact()}>Contacts</MenuItem> */}
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
               </Menu>
             </Box>
@@ -323,7 +323,7 @@ export default function WhatsAppUI() {
               variant="fullWidth"
             >
               <Tab label="Chats" />
-              <Tab label="Status" />
+              <Tab label="Contacts" />
             </Tabs>
 
             <Divider />
@@ -363,7 +363,7 @@ export default function WhatsAppUI() {
                       {chat.username.charAt(0).toUpperCase()}
                     </Avatar>
                     <ListItemText
-                      primary={chat.username}
+                      primary={`${chat.first_name} ${chat.last_name}`}
                       secondary={chat.message}
                     />
                   </ListItem>
@@ -378,15 +378,33 @@ export default function WhatsAppUI() {
                     cursor: "pointer",
                     bgcolor: "lightblue",
                   }}
+                  onClick={() => openHandleCreateContact()}
                 >
                   <Avatar sx={{ mr: 2, bgcolor: "lightgreen", border: "1px solid black" }}>
                     <AddIcon sx={{ color: "black" }} />
                   </Avatar>
                   <ListItemText
-                    primary="New Status"
-                    secondary="Create new status"
+                    primary="New Contact"
+                    secondary="Create add contact"
                   />
                 </ListItem>
+                <Divider />
+                {contacts.map((contact) => (
+                  <ListItem
+                    key={contact.contact_uuid}
+                    sx={{
+                      cursor: "pointer",
+                      bgcolor: "transparent",
+                    }}
+                  >
+                    <Avatar sx={{ mr: 2 }}>
+                      {contact.full_name.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <ListItemText
+                      primary={contact.full_name}
+                    />
+                  </ListItem>
+                ))}
               </List>
             )}
           </Box>
@@ -409,7 +427,7 @@ export default function WhatsAppUI() {
                   <IconButton onClick={() => handleCloseMessageDetail()}>
                     <ArrowBackIcon />
                   </IconButton>
-                  <Typography variant="h6">{selectedChat.username}</Typography>
+                  <Typography variant="h6">{`${selectedChat.first_name} ${selectedChat.last_name}`}</Typography>
                 </Box>
 
                 {/* MESSAGES */}
@@ -583,8 +601,8 @@ export default function WhatsAppUI() {
               />
             </form>
             <List
-              ref={handleScrollContact}
-              onScroll={handleScroll}
+              ref={listRef}
+              onScroll={handleScrollContact}
               sx={{ flex: 1, overflowY: "auto", maxHeight: 300 }}
             >
               {contacts.map((contact) => (
