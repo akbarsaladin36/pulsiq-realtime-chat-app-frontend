@@ -7,6 +7,7 @@ const useMessagesStore = create((set, get) => ({
   error: null,
   loading: false,
   lastId: null,
+  hasMore: null,
 
   GetMessages: async () => {
     set({ loading: true });
@@ -18,18 +19,21 @@ const useMessagesStore = create((set, get) => ({
     }
   },
 
-  GetMessage: async (otherUserUuid) => {
+  GetMessage: async (otherUserUuid, lastId = null) => {
     set({ loading: true });
     try {
       const res = await axiosApi.get(`user/messages/${otherUserUuid}`, {
-        params: {
-          limit: 20,
-        },
+        params: { limit: 20, lastId },
       });
-      const arrayMessages = Array.isArray(res.data.data)
-        ? res.data.data
-        : Object.values(res.data.data);
-      set({ messageDetails: arrayMessages, error: null, loading: false });
+      const { messages, hasMore } = res.data.data;
+      set((state) => ({
+        messageDetails: lastId
+          ? [...messages, ...state.messageDetails]
+          : messages,
+        hasMore,
+        loading: false,
+        error: null,
+      }));
     } catch (error) {
       set({
         messageDetails: [],
@@ -38,6 +42,8 @@ const useMessagesStore = create((set, get) => ({
       });
     }
   },
+
+  resetMessages: () => set({ messageDetails: [], hasMore: true }),
 
   CreateMessage: async (data) => {
     set({ loading: true });

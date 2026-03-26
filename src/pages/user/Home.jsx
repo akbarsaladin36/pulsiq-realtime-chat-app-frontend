@@ -45,9 +45,12 @@ export default function Home() {
   const [openCreateContactModal, setOpenCreateContactModal] = useState(false);
   const [searchUser, setSearchUser] = useState("");
   const [searchContactUser, setSearchContactUser] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [selectedContact, setSelectedContact] = useState(null)
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const listRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const open = Boolean(anchorEl);
   const {
     GetMessages,
@@ -56,12 +59,13 @@ export default function Home() {
     messageDetails,
     CreateMessage,
     AddRealtimeMessage,
+    resetMessages,
+    hasMore
   } = useMessagesStore();
   const { fetchUser, user } = useAuthStore();
   const { GetProfile, UpdateProfile } = useProfilesStore();
   const { GetUsersPaginate, setSearch, nextPage, resetAndFetch, users, loading } = useUsersStore()
   const { GetContacts, setSearchContact, nextPageContact, resetAndFetchContact, CreateContact, contacts } = useContactsStore()
-  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     GetMessages();
@@ -102,8 +106,14 @@ export default function Home() {
     return () => socket.off("receive_message", handler);
   }, [selectedChat]);
 
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messageDetails]);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isFetchingMore) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messageDetails]);
 
   // useEffect for contact modal
@@ -203,7 +213,30 @@ export default function Home() {
 
   const handleMessageDetail = async (chat) => {
     setSelectedChat(chat);
+
+    resetMessages();
+
     await GetMessage(chat.uuid);
+
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop =
+          chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  };
+
+  const loadMoreMessages = async () => {
+    if (!messageDetails.length || isFetchingMore) return;
+    if (!hasMore) return; // 🔥 penting
+    const oldestId = messageDetails[0]?.id;
+    if (!oldestId) return;
+    setIsFetchingMore(true);
+    const prevHeight = chatContainerRef.current.scrollHeight;
+    await GetMessage(selectedChat.uuid, oldestId);
+    const newHeight = chatContainerRef.current.scrollHeight;
+    chatContainerRef.current.scrollTop = newHeight - prevHeight;
+    setIsFetchingMore(false);
   };
 
   const handleCloseMessageDetail = () => {
@@ -431,7 +464,18 @@ export default function Home() {
                 </Box>
 
                 {/* MESSAGES */}
-                <Box sx={{ flex: 1, p: 2, overflowY: "auto" }}>
+                <Box 
+                  ref={chatContainerRef}
+                  onScroll={(e) => {
+                    if (e.target.scrollTop <= 10) {
+                      loadMoreMessages();
+                    }
+                  }}  
+                  sx={{ flex: 1, p: 2, overflowY: "auto" }}>
+                  {isFetchingMore && (
+                    <Typography textAlign="center">Loading...</Typography>
+                  )}
+                  
                   {messageDetails?.map((msg, index) => (
                     <Box
                       key={index}
