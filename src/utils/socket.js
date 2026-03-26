@@ -6,11 +6,12 @@ let socket;
 export const connectSocket = () => {
   const token = getToken();
 
-  console.log('SOCKET URL :',import.meta.env.VITE_SOCKET_IO_URL)
+  // console.log('SOCKET URL :',import.meta.env.VITE_SOCKET_IO_URL)
 
   socket = io(import.meta.env.VITE_SOCKET_IO_URL, {
     // transports: ["websocket", "polling"],
-    transports: ["polling"],
+    path: "/pulsiq-app/socket.io",
+    transports: ["websocket","polling"],
     auth: { token },
   });
 
