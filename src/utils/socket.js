@@ -11,7 +11,7 @@ export const connectSocket = () => {
   socket = io(import.meta.env.VITE_SOCKET_IO_URL, {
     // transports: ["websocket", "polling"],
     path: "/pulsiq-app/socket.io",
-    transports: ["websocket","polling"],
+    transports: ["polling"],
     auth: { token },
   });
 
