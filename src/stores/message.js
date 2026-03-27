@@ -1,6 +1,8 @@
 import axiosApi from "@/utils/axios";
 import { create } from "zustand";
 
+const safeArray = (val) => (Array.isArray(val) ? val : []);
+
 const useMessagesStore = create((set, get) => ({
   messages: [],
   messageDetails: [],
@@ -25,10 +27,12 @@ const useMessagesStore = create((set, get) => ({
       const res = await axiosApi.get(`user/messages/${otherUserUuid}`, {
         params: { limit: 20, lastId },
       });
-      const { messages, hasMore } = res.data.data;
+      const data = res?.data?.data || {};
+      const messages = safeArray(data.messages);
+      const hasMore = data.hasMore ?? false;
       set((state) => ({
         messageDetails: lastId
-          ? [...messages, ...state.messageDetails]
+          ? [...messages, ...safeArray(state.messageDetails)]
           : messages,
         hasMore,
         loading: false,
@@ -57,9 +61,15 @@ const useMessagesStore = create((set, get) => ({
   },
 
   AddRealtimeMessage: (msg) => {
-    set((state) => ({
-      messageDetails: [...state.messageDetails, msg],
-    }));
+    set((state) => {
+      const currentMessages = safeArray(state.messageDetails);
+      // 🔥 prevent duplicate
+      const isExist = currentMessages.some((m) => m.id === msg.id);
+      if (isExist) return state;
+      return {
+        messageDetails: [...currentMessages, msg],
+      };
+    });
   },
 }));
 
